@@ -7,10 +7,22 @@
 
 import SwiftUI
 
+public struct PayInformation {
+    let localType: String
+    let businessType: String
+    let localAmount: Double
+    let businessAmount: Double
+}
+
+
 struct PagarView: View {
     // Estados para los montos
-    @State private var totalMXN: Double = 0.0
-    @State private var totalUSD: Double = 0.0
+    @State private var payInfo = PayInformation(
+        localType: "Efectivo",
+        businessType: "Transferencia",
+        localAmount: 250.0,
+        businessAmount: 1000.0
+    )
     
     var body: some View {
         VStack(spacing: 20) {
@@ -27,7 +39,7 @@ struct PagarView: View {
                     .font(.headline)
                     .foregroundColor(.secondary)
                 
-                Text("$\(totalMXN, specifier: "%.2f") MXN")
+                Text("$\(payInfo.localAmount, specifier: "%.2f") MXN")
                     .font(.system(size: 36, weight: .bold))
                     .foregroundColor(.primary)
             }
@@ -43,7 +55,7 @@ struct PagarView: View {
                     .font(.headline)
                     .foregroundColor(.secondary)
                 
-                Text("$\(totalUSD, specifier: "%.2f") USD")
+                Text("$\(payInfo.businessAmount, specifier: "%.2f") USD")
                     .font(.system(size: 36, weight: .bold))
                     .foregroundColor(.primary)
             }
