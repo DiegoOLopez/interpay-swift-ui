@@ -4,7 +4,7 @@
 //
 //  Created by Diego Obed on 08/11/25.
 //
-
+/**
 import Foundation
 
 import MultipeerConnectivity
@@ -66,3 +66,5 @@ class MiControladorDeConexion: NSObject, MCSessionDelegate {
         // No usado para JSON
     }
 }
+
+ */
