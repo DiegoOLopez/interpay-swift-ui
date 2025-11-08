@@ -8,14 +8,27 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var selectedTab: Tab = .cobrar
+    
+    enum Tab {
+        case cobrar
+        case pagar
+    }
+    
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        TabView(selection: $selectedTab) {
+            CobrarView()
+                .tag(Tab.cobrar)
+                .tabItem {
+                    Label("Cobrar", systemImage: "arrow.down.circle")
+                }
+            
+            PagarView()
+                .tag(Tab.pagar)
+                .tabItem {
+                    Label("Pagar", systemImage: "arrow.up.circle")
+                }
         }
-        .padding()
     }
 }
 
