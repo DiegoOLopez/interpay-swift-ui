@@ -6,12 +6,14 @@
 //
 
 import SwiftUI
+import MultipeerConnectivity
 
 struct CobrarView: View {
     @State private var amount: String = ""
     @State private var selectedCurrency: Currency = .MXN
     @State private var showCurrencyPicker: Bool = false
     @FocusState private var isAmountFocused: Bool
+    @StateObject private var sendAmount = SendAmount()
     
     enum Currency: String, CaseIterable {
         case PKR = "PKR"
@@ -247,6 +249,7 @@ struct CobrarView: View {
         guard let amountValue = Double(amount) else { return }
         print("Cobrando \(selectedCurrency.symbol)\(amountValue) \(selectedCurrency.rawValue)")
         // Aquí implementarás la lógica de cobro
+        sendAmount.sendPaymentRequest(amount: amountValue, currency: selectedCurrency.rawValue)
     }
 }
 

@@ -11,7 +11,7 @@ import MultipeerConnectivity
 import SwiftUI
 
 // Este manager manejará toda la lógica de MPC
-class sendAmount: NSObject, ObservableObject, MCSessionDelegate, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBrowserDelegate {
+class SendAmount: NSObject, ObservableObject, MCSessionDelegate, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBrowserDelegate {
     
     private let serviceType = "interpay-mpc" // Un identificador único para tu app
     private let myPeerID: MCPeerID
