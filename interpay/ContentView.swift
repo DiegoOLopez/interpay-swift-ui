@@ -1,10 +1,9 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var isAuthenticated = false
     @State private var selectedTab: Tab = .home
-    // Si tu clase es 'sendAmount' (minúscula), usa:
-    // @StateObject private var sendAmount = sendAmount()
-    @StateObject private var sendAmount = SendAmount()
+    @StateObject private var sendAmount = SendAmount() // usa la clase existente en tu proyecto
     
     enum Tab {
         case home
@@ -14,25 +13,31 @@ struct ContentView: View {
     }
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            HomeView()
-                .tag(Tab.home)
-                .tabItem { Label("Inicio", systemImage: "house.fill") }
-            
-            CobrarView()
-                .tag(Tab.cobrar)
-                .tabItem { Label("Cobrar", systemImage: "arrow.down.circle") }
-            
-            PagarView()
-                .tag(Tab.pagar)
-                .tabItem { Label("Pagar", systemImage: "arrow.up.circle") }
-            
-            NavigationStack {
-                MapView()
+        Group {
+            if isAuthenticated {
+                TabView(selection: $selectedTab) {
+                    HomeView()
+                        .tag(Tab.home)
+                        .tabItem { Label("Inicio", systemImage: "house.fill") }
+                    
+                    CobrarView()
+                        .tag(Tab.cobrar)
+                        .tabItem { Label("Cobrar", systemImage: "arrow.down.circle") }
+                    
+                    PagarView()
+                        .tag(Tab.pagar)
+                        .tabItem { Label("Pagar", systemImage: "arrow.up.circle") }
+                    
+                    NavigationStack {
+                        MapView()
+                    }
+                    .tag(Tab.mapa)
+                    .tabItem { Label("Mapa", systemImage: "map") }
+                }
+                .environmentObject(sendAmount)
+            } else {
+                LoginView(isAuthenticated: $isAuthenticated)
             }
-            .tag(Tab.mapa)
-            .tabItem { Label("Mapa", systemImage: "map") }
         }
-        .environmentObject(sendAmount)
     }
 }
