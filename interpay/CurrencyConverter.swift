@@ -25,9 +25,26 @@ class CurrencyConverter {
     
     // Función asíncrona para obtener la conversión
     func convert(amount: Double, from baseCurrency: String, to targetCurrency: String) async throws -> Double {
+        let newBaseCurrency: String = switch baseCurrency {
+        case "PKR": "PKR"   // Pakistani Rupee 🇵🇰
+        case "PEB": "RUB"   // Russian Ruble 🇷🇺 (código correcto)
+        case "EGG": "EGP"   // Egyptian Pound 🇪🇬 (código correcto)
+        case "CAD": "CAD"   // Canadian Dollar 🇨🇦
+        case "SGD": "SGD"   // Singapore Dollar 🇸🇬
+        case "MXN": "MXN"   // Mexican Peso 🇲🇽
+        case "GBP": "GBP"   // Pound Sterling 🇬🇧
+        case "ZAR": "ZAR"   // South African Rand 🇿🇦
+        case "EUR": "EUR"   // Euro 🇪🇺
+        case "USD": "USD"   // United States Dollar 🇺🇸
+        default: baseCurrency // Por si llega otra moneda no contemplada
+        }
+
+
+
+
         
         // 1. Construir la URL
-        let urlString = "https://v6.exchangerate-api.com/v6/\(apiKey)/latest/\(baseCurrency)"
+        let urlString = "https://v6.exchangerate-api.com/v6/\(apiKey)/latest/\(newBaseCurrency)"
         guard let url = URL(string: urlString) else {
             throw URLError(.badURL)
         }
