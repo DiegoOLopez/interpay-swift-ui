@@ -18,13 +18,14 @@ public struct PayInformation {
 struct PagarView: View {
     // Estados para los montos
     @State private var payInfo = PayInformation(
-        localType: "-",
+        localType: "MX",
         businessType: "-",
         localAmount: 0.0,
         businessAmount: 0.0
     )
     @EnvironmentObject var sendAmount: SendAmount
-
+    private let currencyConverter = CurrencyConverter()
+    @State private var isLoading = false
     
     var body: some View {
         VStack(spacing: 20) {
@@ -84,15 +85,45 @@ struct PagarView: View {
             .padding(.horizontal)
             .padding(.bottom, 40)
         }
-        .onChange(of: sendAmount.solicitudRecibida) { _, nuevaSolicitud in
-            
-            guard let solicitud = nuevaSolicitud else { return }
-            payInfo.businessAmount = solicitud.amount
-            payInfo.businessType = solicitud.currency
+        .task(id: sendAmount.solicitudRecibida) {
+            guard let solicitud = sendAmount.solicitudRecibida else { return }
+            await actualizarMontos(from: solicitud)
             
         }
         
     }
+    func actualizarMontos(from solicitud: SolicitudPago) async {
+            isLoading = true
+            
+            payInfo.businessType = solicitud.currency
+            payInfo.businessAmount = solicitud.amount
+            
+            do {
+                if payInfo.businessType == payInfo.localType {
+                    // --- CASO 1: Recibimos un pago en nuestra moneda local (ej. MXN) ---
+                    
+                    // Caja local (MXN) muestra el monto recibido
+                    payInfo.localType = payInfo.businessType
+                    payInfo.localAmount = payInfo.businessAmount
+                    
+                } else {
+                    // --- CASO 2: Recibimos un pago en moneda externa (ej. CAD, USD, EUR) ---
+
+                    let montoConvertido = try await currencyConverter.convert(
+                        amount: payInfo.businessAmount,
+                        from: payInfo.businessType,
+                        to: payInfo.localType
+                    )
+                    payInfo.localAmount = montoConvertido
+                }
+            } catch {
+                print("Error al convertir moneda: \(error.localizedDescription)")
+                payInfo.localType = "Error"
+                payInfo.businessType = "Error"
+            }
+            
+            isLoading = false
+        }
 }
 
 #Preview {
