@@ -14,6 +14,7 @@ struct Place: Identifiable {
     let name: String
     let subtitle: String?
     let coordinate: CLLocationCoordinate2D
+    let isPremium: Bool
 }
 
 @MainActor
@@ -31,7 +32,6 @@ final class MapViewModel: ObservableObject {
         
         var id: String { rawValue }
         
-        // Sugerencia de prefijo para el nombre ficticio
         var displayPrefix: String {
             switch self {
             case .all: return "Lugar"
@@ -51,15 +51,15 @@ final class MapViewModel: ObservableObject {
             center: baseCoordinate,
             span: MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)
         )
-        // Generamos lugares iniciales
         generateMockPlaces()
     }
     
     func generateMockPlaces() {
-        // Generamos 15 puntos alrededor del centro con offsets pequeños
+        // Configuración
         let count = 15
         let latDeltaRange: ClosedRange<Double> = -0.02...0.02
         let lonDeltaRange: ClosedRange<Double> = -0.02...0.02
+        let premiumProbability = 0.3 // 30% premium
         
         var newPlaces: [Place] = []
         for i in 1...count {
@@ -70,7 +70,6 @@ final class MapViewModel: ObservableObject {
                 longitude: baseCoordinate.longitude + lonOffset
             )
             
-            // Nombre según categoría seleccionada (si es "Todo", alternamos)
             let prefix: String
             if selectedCategory == .all {
                 let allPrefixes: [Category] = [.restaurants, .cafes, .stores, .banks]
@@ -79,10 +78,13 @@ final class MapViewModel: ObservableObject {
                 prefix = selectedCategory.displayPrefix
             }
             
+            let premium = Double.random(in: 0...1) < premiumProbability
+            
             let place = Place(
                 name: "\(prefix) \(i)",
-                subtitle: "Zona Centro, CDMX",
-                coordinate: coord
+                subtitle: premium ? "Destacado" : "Zona Centro, CDMX",
+                coordinate: coord,
+                isPremium: premium
             )
             newPlaces.append(place)
         }
@@ -92,25 +94,18 @@ final class MapViewModel: ObservableObject {
 
 struct MapView: View {
     @StateObject private var vm = MapViewModel()
-    @State private var mapSelection: MKMapItem?
     @State private var position: MapCameraPosition = .automatic
     
     var body: some View {
         VStack(spacing: 0) {
             controlBar
             
-            Map(position: $position, selection: $mapSelection) {
+            Map(position: $position) {
                 ForEach(vm.places) { place in
                     Annotation(place.name, coordinate: place.coordinate) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.blue)
-                                .frame(width: 10, height: 10)
-                            Circle()
-                                .stroke(Color.white, lineWidth: 2)
-                                .frame(width: 14, height: 14)
-                        }
-                        .accessibilityLabel(place.name)
+                        markerView(for: place)
+                            .accessibilityLabel(place.name)
+                            .accessibilityHint(place.subtitle ?? "")
                     }
                 }
             }
@@ -120,16 +115,53 @@ struct MapView: View {
                 MapScaleView()
             }
             .task {
-                // Posicionamos el mapa en la región fija al cargar
                 position = .region(vm.region)
             }
             .onChange(of: vm.selectedCategory) { _, _ in
-                // Regeneramos lugares cuando cambia la categoría
                 vm.generateMockPlaces()
             }
         }
         .navigationTitle("Mapa")
         .navigationBarTitleDisplayMode(.inline)
+    }
+    
+    // Marcador personalizado: premium (amarillo un poco más grande) vs normal (azul)
+    @ViewBuilder
+    private func markerView(for place: Place) -> some View {
+        if place.isPremium {
+            // Premium: sutilmente más grande que el normal
+            ZStack {
+                // Halo suave (ligeramente mayor que el normal)
+                Circle()
+                    .fill(Color.yellow.opacity(0.20))
+                    .frame(width: 24, height: 24)
+                    .blur(radius: 1.0)
+                
+                // Círculo principal un poco más grande (16 vs 12)
+                Circle()
+                    .fill(Color.yellow)
+                    .frame(width: 16, height: 16)
+                    .shadow(color: Color.yellow.opacity(0.35), radius: 3, x: 0, y: 1)
+                
+                // Borde blanco sutil (ligeramente mayor)
+                Circle()
+                    .stroke(Color.white, lineWidth: 2)
+                    .frame(width: 20, height: 20)
+            }
+        } else {
+            // Normal: azul
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.18))
+                    .frame(width: 20, height: 20)
+                Circle()
+                    .fill(Color.blue)
+                    .frame(width: 12, height: 12)
+                Circle()
+                    .stroke(Color.white, lineWidth: 2)
+                    .frame(width: 16, height: 16)
+            }
+        }
     }
     
     private var controlBar: some View {
