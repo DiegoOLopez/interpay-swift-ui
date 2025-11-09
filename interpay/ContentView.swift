@@ -11,6 +11,7 @@ struct ContentView: View {
         case pagar
         case mapa
         case perfil
+        case sales
     }
     
     var body: some View {
@@ -34,6 +35,10 @@ struct ContentView: View {
                     }
                     .tag(Tab.mapa)
                     .tabItem { Label("Mapa", systemImage: "map") }
+                    
+                    SalesView()
+                        .tag(Tab.sales)
+                        .tabItem { Label("Analytics", systemImage: "chart.bar.xaxis") }
                     
                     ProfileView(isAuthenticated: $isAuthenticated)
                         .tag(Tab.perfil)

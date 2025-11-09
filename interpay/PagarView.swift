@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import LocalAuthentication
 
 public struct PayInformation {
     var localType: String
@@ -253,6 +254,9 @@ struct PagarView: View {
                             
                             Button(action: {
                                 print("Payment processed.")
+                                Task {
+                                    await authenticate()
+                                }
                             }) {
                                 HStack(spacing: 12) {
                                     Image(systemName: "lock.shield.fill")
@@ -342,6 +346,32 @@ struct PagarView: View {
                 businessAmount: 0.0
             )
         }
+    }
+    
+    func authenticate() async {
+            let context = LAContext()
+            let reason = "Para autorizar tus pagos."
+
+            do {
+                // Intenta la autenticación
+                let success = try await context.evaluatePolicy(
+                    .deviceOwnerAuthenticationWithBiometrics,
+                    localizedReason: reason
+                )
+                
+                // Si tiene éxito...
+                if success {
+                    // ✅ Autenticación Exitosa
+                    print("Payment processed.")
+                    // Aquí va tu lógica de pago real
+                } else {
+                    // El usuario pudo haber fallado
+                    print("Authentication failed.")
+                }
+            } catch {
+                // ❌ Ocurrió un error
+                print("Error: \(error.localizedDescription)")
+            }
     }
 }
 
