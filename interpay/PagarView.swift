@@ -14,7 +14,6 @@ public struct PayInformation {
     var businessAmount: Double
 }
 
-
 struct PagarView: View {
     // --- ESTADOS ---
     @State private var payInfo = PayInformation(
@@ -27,6 +26,8 @@ struct PagarView: View {
     private let currencyConverter = CurrencyConverter()
     @State private var isLoading = false
     @State private var rotationAngle: Double = 0
+    @State private var showCancelAlert = false
+    
     var body: some View {
         VStack(spacing: 20) {
             
@@ -38,18 +39,18 @@ struct PagarView: View {
                     // Animated icon
                     ZStack {
                         Circle()
-                            .stroke(Color.blue.opacity(0.2), lineWidth: 3)
+                            .stroke(Color(red: 0/255, green: 157/255, blue: 136/255).opacity(0.2), lineWidth: 3)
                             .frame(width: 80, height: 80)
                         
                         Circle()
                             .trim(from: 0, to: 0.7)
-                            .stroke(Color.blue, lineWidth: 3)
+                            .stroke(Color(red: 0/255, green: 157/255, blue: 136/255), lineWidth: 3)
                             .frame(width: 80, height: 80)
                             .rotationEffect(Angle(degrees: rotationAngle))
                         
                         Image(systemName: "dollarsign.circle.fill")
                             .font(.system(size: 36))
-                            .foregroundColor(.blue)
+                            .foregroundColor(Color(red: 0/255, green: 157/255, blue: 136/255))
                     }
                     .padding(.bottom, 8)
                     .onAppear {
@@ -76,17 +77,51 @@ struct PagarView: View {
                     
                     Spacer()
                 }
+                
             } else {
                 // --- 2. SOLICITUD RECIBIDA ---
                 // Comprueba si está cargando (convirtiendo) o si ya terminó
                 
                 if isLoading {
-                    // --- 2A. ESTADO DE CARGA / CONVERSIÓN ---
-                    Spacer()
-                    ProgressView("Calculating conversion...")
-                        .font(.headline)
-                        .padding()
-                    Spacer()
+                    // --- 2A. LOADING / CONVERSION STATE ---
+                    VStack(spacing: 20) {
+                        Spacer()
+                        
+                        ZStack {
+                            Circle()
+                                .stroke(Color(red: 0/255, green: 157/255, blue: 136/255).opacity(0.2), lineWidth: 3)
+                                .frame(width: 60, height: 60)
+                            
+                            Circle()
+                                .trim(from: 0, to: 0.7)
+                                .stroke(Color(red: 0/255, green: 157/255, blue: 136/255), lineWidth: 3)
+                                .frame(width: 60, height: 60)
+                                .rotationEffect(Angle(degrees: rotationAngle))
+                            
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(.system(size: 24))
+                                .foregroundColor(Color(red: 0/255, green: 157/255, blue: 136/255))
+                        }
+                        .onAppear {
+                            withAnimation(
+                                Animation.linear(duration: 1.5)
+                                    .repeatForever(autoreverses: false)
+                            ) {
+                                rotationAngle = 360
+                            }
+                        }
+                        
+                        Text("Calculating conversion")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        
+                        Text("Please wait a moment")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                    }
                     
                 } else {
                     // --- 2B. PAYMENT READY STATE ---
@@ -94,6 +129,32 @@ struct PagarView: View {
                         
                         ScrollView {
                             VStack(spacing: 20) {
+                                // Header with cancel button
+                                HStack {
+                                    Spacer()
+                                    
+                                    Button(action: {
+                                        showCancelAlert = true
+                                    }) {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.system(size: 16))
+                                            Text("Cancel")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                        }
+                                        .foregroundColor(.red)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(
+                                            Capsule()
+                                                .fill(Color.red.opacity(0.1))
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.top, 10)
+                                
                                 // Header
                                 VStack(spacing: 8) {
                                     Image(systemName: "checkmark.circle.fill")
@@ -105,7 +166,6 @@ struct PagarView: View {
                                         .fontWeight(.bold)
                                         .foregroundColor(.primary)
                                 }
-                                .padding(.top, 30)
                                 .padding(.bottom, 10)
                                 
                                 // Local Currency Card
@@ -214,6 +274,14 @@ struct PagarView: View {
                 }
             }
         }
+        .alert("Cancel Payment Request", isPresented: $showCancelAlert) {
+            Button("No, Keep It", role: .cancel) {}
+            Button("Yes, Cancel", role: .destructive) {
+                cancelPaymentRequest()
+            }
+        } message: {
+            Text("Are you sure you want to cancel this payment request?")
+        }
         .task(id: sendAmount.solicitudRecibida) {
             // Esto se dispara en cuanto 'solicitudRecibida' cambia
             guard let solicitud = sendAmount.solicitudRecibida else {
@@ -255,6 +323,25 @@ struct PagarView: View {
         }
         
         isLoading = false
+    }
+    
+    // Función para cancelar la solicitud
+    func cancelPaymentRequest() {
+        guard let idToCancel = sendAmount.solicitudRecibida?.id else {
+                // No hay solicitud que cancelar, solo resetea localmente
+                sendAmount.solicitudRecibida = nil
+                return
+            }
+        sendAmount.broadcastCancelMessage(for: idToCancel)
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            sendAmount.solicitudRecibida = nil
+            payInfo = PayInformation(
+                localType: "MXN",
+                businessType: "-",
+                localAmount: 0.0,
+                businessAmount: 0.0
+            )
+        }
     }
 }
 

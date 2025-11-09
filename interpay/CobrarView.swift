@@ -12,7 +12,7 @@ struct CobrarView: View {
     @State private var amount: String = ""
     @State private var selectedCurrency: Currency = .MXN
     @State private var showCurrencyPicker: Bool = false
-    @State private var showRequestSent: Bool = false
+    // @State private var showRequestSent: Bool = false
     @FocusState private var isAmountFocused: Bool
     @EnvironmentObject var sendAmount: SendAmount
     
@@ -362,20 +362,18 @@ struct CobrarView: View {
             }
             
             // Request Sent Overlay
-            if showRequestSent {
+            if let sentRequest = sendAmount.solicitudEnviada {
                 RequestSentView(
-                    amount: amount,
-                    currency: selectedCurrency.rawValue,
+                    amount: String(sentRequest.amount),
+                    currency: sentRequest.currency,
+                    
                     onCancel: {
-                        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                            showRequestSent = false
-                            amount = ""
-                        }
+                        sendAmount.sendCancelRequest()
                     }
                 )
+                .environmentObject(sendAmount)
                 .transition(.opacity.combined(with: .scale(scale: 0.9)))
-            }
-        }
+            }        }
         .onTapGesture {
             isAmountFocused = false
         }
@@ -384,12 +382,7 @@ struct CobrarView: View {
     private func cobrarAction() {
         guard let amountValue = Double(amount) else { return }
         
-        // Mostrar la vista de solicitud enviada
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-            showRequestSent = true
-            isAmountFocused = false
-        }
-        
+        isAmountFocused = false
         // Enviar la solicitud
         print("Cobrando \(selectedCurrency.symbol)\(amountValue) \(selectedCurrency.rawValue)")
         sendAmount.sendPaymentRequest(amount: amountValue, currency: selectedCurrency.rawValue)
@@ -403,6 +396,7 @@ struct RequestSentView: View {
     @State private var showCheckmark: Bool = false
     @State private var dotsCount: Int = 0
     @State private var timer: Timer?
+    @EnvironmentObject var sendAmount: SendAmount
     
     let amount: String
     let currency: String
@@ -561,7 +555,14 @@ struct RequestSentView: View {
                     }
                     
                     // Cancel button
-                    Button(action: onCancel) {
+                    Button(action:{
+                        // 1. Esto llama a la NUEVA función que acabamos de crear en SendAmount
+                        sendAmount.sendCancelRequest()
+                            
+                        // 2. Esto ejecuta el cierre de la vista (como ya lo hacía)
+                        onCancel()
+                    }
+                    ) {
                         Text("Cancel Request")
                             .font(.headline)
                             .foregroundColor(Color(red: 0/255, green: 157/255, blue: 136/255))

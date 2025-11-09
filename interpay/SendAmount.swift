@@ -1,86 +1,154 @@
 import Foundation
 import Combine
-// Estructura de datos que realmente enviaremos
+import MultipeerConnectivity
+import SwiftUI
+
+// --- 1. DEFINICIÓN DE MENSAJEROS ---
+
+// Tu struct original, la necesitamos para el .request
 struct SolicitudPago: Codable, Equatable {
     var id: UUID
     var amount: Double
     var currency: String // Usaremos el 'rawValue' de tu enum, ej: "MXN"
 }
 
-import MultipeerConnectivity
-import SwiftUI
+// NUEVO: El "mensajero" que envuelve todos nuestros tipos de mensajes
+enum PaymentMessage: Codable {
+    case request(SolicitudPago)
+    case cancel(UUID) // Enviamos el ID de la solicitud a cancelar
+}
+
+
+// --- 2. TU CLASE 'SendAmount' ACTUALIZADA ---
 
 // Este manager manejará toda la lógica de MPC
 class SendAmount: NSObject, ObservableObject, MCSessionDelegate, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBrowserDelegate {
     
-    private let serviceType = "interpay-mpc" // Un identificador único para tu app
+    // (Propiedades de sesión - Sin cambios)
+    private let serviceType = "interpay-mpc"
     private let myPeerID: MCPeerID
     let session: MCSession
     private let serviceAdvertiser: MCNearbyServiceAdvertiser
     private let serviceBrowser: MCNearbyServiceBrowser
 
-    // Publica los peers conectados para que la vista pueda verlos si es necesario
+    private var invitedPeers: [MCPeerID] = []
+    // (Propiedades @Published - Sin cambios)
     @Published var connectedPeers: [MCPeerID] = []
-    
     @Published var solicitudRecibida: SolicitudPago? = nil
+    @Published var solicitudEnviada: SolicitudPago? = nil
+    
+    // --- NUEVA PROPIEDAD ---
+    // Guarda el ID de la última solicitud que ENVIAMOS
+    private var lastSentRequestID: UUID?
 
+    // (init - Sin cambios)
     override init() {
-        // 1. Inicializa el PeerID con el nombre del dispositivo
         self.myPeerID = MCPeerID(displayName: UIDevice.current.name)
-        
-        // 2. Crea la sesión
         self.session = MCSession(peer: myPeerID, securityIdentity: nil, encryptionPreference: .required)
-        
-        // 3. Crea el Advertiser (para que otros te vean)
         self.serviceAdvertiser = MCNearbyServiceAdvertiser(peer: myPeerID, discoveryInfo: nil, serviceType: serviceType)
-        
-        // 4. Crea el Browser (para ver a otros)
         self.serviceBrowser = MCNearbyServiceBrowser(peer: myPeerID, serviceType: serviceType)
-
         super.init()
-
-        // 5. Asigna los delegados
         self.session.delegate = self
         self.serviceAdvertiser.delegate = self
         self.serviceBrowser.delegate = self
-
-        // 6. Empieza a anunciar y buscar
         self.serviceAdvertiser.startAdvertisingPeer()
         self.serviceBrowser.startBrowsingForPeers()
     }
     
+    // (deinit - Sin cambios)
     deinit {
-        // Detener al salir
         self.serviceAdvertiser.stopAdvertisingPeer()
         self.serviceBrowser.stopBrowsingForPeers()
     }
 
-    // --- FUNCIÓN DE ENVÍO ---
-    // Esta es la función clave que llamará tu vista
+    // --- FUNCIÓN DE ENVÍO (ACTUALIZADA) ---
     func sendPaymentRequest(amount: Double, currency: String) {
         guard !session.connectedPeers.isEmpty else {
             print("No hay peers conectados a los que enviar la solicitud.")
             return
         }
 
-        // 1. Crea el objeto que quieres enviar
+        // 1. Crea la solicitud
         let solicitud = SolicitudPago(id: UUID(), amount: amount, currency: currency)
 
+        // 2. NUEVO: Guarda este ID localmente
+        self.lastSentRequestID = solicitud.id
+        
+        DispatchQueue.main.async {
+                    self.solicitudEnviada = solicitud
+        }
+        
+        // 3. NUEVO: Envuelve la solicitud en nuestro "Mensajero"
+        let message = PaymentMessage.request(solicitud)
+        
         do {
-            // 2. Codifica el objeto a Data (JSON)
-            let data = try JSONEncoder().encode(solicitud)
+            // 4. Codifica el 'message', no la 'solicitud'
+            let data = try JSONEncoder().encode(message)
             
-            // 3. Envía el Data a todos los peers conectados
             try session.send(data, toPeers: session.connectedPeers, with: .reliable)
-            print("Solicitud de pago enviada correctamente.")
+            print("Mensaje de 'solicitud' enviado con ID: \(solicitud.id)")
             
         } catch let error {
-            print("Error al codificar o enviar SolicitudPago: \(error.localizedDescription)")
+            print("Error al codificar o enviar PaymentMessage.request: \(error.localizedDescription)")
+        }
+    }
+    
+    // --- FUNCIÓN DE CANCELAR  ---
+    func sendCancelRequest() {
+        guard !session.connectedPeers.isEmpty else {
+            print("No hay peers a los que cancelar.")
+            return
+        }
+        
+        // 1. Busca el ID que acabamos de enviar
+        guard let idToCancel = lastSentRequestID else {
+            print("No hay un 'lastSentRequestID' para cancelar.")
+            return
+        }
+        
+        // 2. Crea el mensaje de cancelación
+        let message = PaymentMessage.cancel(idToCancel)
+        
+        do {
+            // 3. Codifica y envía
+            let data = try JSONEncoder().encode(message)
+            try session.send(data, toPeers: session.connectedPeers, with: .reliable)
+            print("Mensaje de 'cancelación' enviado para ID: \(idToCancel)")
+            
+        } catch let error {
+            print("Error al enviar PaymentMessage.cancel: \(error.localizedDescription)")
+        }
+        DispatchQueue.main.async {
+            self.solicitudEnviada = nil
+        }
+        // 4. Limpia el ID para no volver a cancelarlo
+        self.lastSentRequestID = nil
+        
+    }
+    
+    
+    func broadcastCancelMessage(for id: UUID) {
+        guard !session.connectedPeers.isEmpty else {
+            print("No hay peers a los que notificar cancelación.")
+            return
+        }
+        
+        // 1. Crea el mismo mensaje de cancelación
+        let message = PaymentMessage.cancel(id)
+        
+        do {
+            // 2. Codifica y envía a todos
+            let data = try JSONEncoder().encode(message)
+            try session.send(data, toPeers: session.connectedPeers, with: .reliable)
+            print("Mensaje de 'cancelación' (broadcast) enviado para ID: \(id)")
+        } catch {
+            print("Error al enviar broadcast de PaymentMessage.cancel: \(error)")
         }
     }
 
     // --- Métodos Requeridos del Delegado MCSession ---
 
+    // (session:peer:didChange - Sin cambios)
     func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         DispatchQueue.main.async {
             switch state {
@@ -94,59 +162,88 @@ class SendAmount: NSObject, ObservableObject, MCSessionDelegate, MCNearbyService
                 self.connectedPeers.removeAll(where: { $0 == peerID })
             case .connecting:
                 print("Conectando a: \(peerID.displayName)")
+            
             @unknown default:
                 fatalError("Estado desconocido de MCSession")
             }
         }
     }
 
+    // --- FUNCIÓN DE RECEPCIÓN (ACTUALIZADA) ---
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
-        // Aquí es donde RECIBIRÍAS datos (ej. una confirmación de pago)
-        print("Datos recibidos de \(peerID.displayName)")
-            
-            do {
-                // 1. Intenta decodificar el Data como si fuera 'SolicitudPago'
-                let solicitudRecibida = try JSONDecoder().decode(SolicitudPago.self, from: data)
-                
-                // 2. ¡Éxito! Ahora puedes usar el objeto
-                print("¡Solicitud de pago recibida!")
-                print("Moneda: \(solicitudRecibida.currency)")
-                print("Monto: \(solicitudRecibida.amount)")
+        
+        do {
+            // 1. Decodifica el 'PaymentMessage' (en lugar de SolicitudPago)
+            let message = try JSONDecoder().decode(PaymentMessage.self, from: data)
 
-                // 3. Si necesitas actualizar la UI (ej. mostrar una alerta)
-                // debes hacerlo en el hilo principal.
+            // 2. Comprueba qué tipo de mensaje es
+            switch message {
+                
+            case .request(let solicitud):
+                // Es una solicitud de pago (como antes)
+                print("Mensaje 'request' RECIBIDO de \(peerID.displayName) con ID: \(solicitud.id)")
                 DispatchQueue.main.async {
-                    // Aquí podrías, por ejemplo, activar una alerta en tu UI
-                    self.solicitudRecibida = solicitudRecibida
-                    print("Actualizando UI en hilo principal (si es necesario)...")
+                    self.solicitudRecibida = solicitud
                 }
                 
-            } catch let error {
-                // Esto pasará si envías un tipo de dato incorrecto
-                print("Error al decodificar SolicitudPago de \(peerID.displayName): \(error.localizedDescription)")
+            case .cancel(let idToCancel):
+                // Es una cancelación
+                print("Mensaje 'cancel' RECIBIDO de \(peerID.displayName) para ID: \(idToCancel)")
+                
+                // Comprueba si es para la solicitud que estamos mostrando
+                if self.solicitudRecibida?.id == idToCancel {
+                    DispatchQueue.main.async {
+                        self.solicitudRecibida = nil // Esto resetea PagarView
+                    }
+                }
+                // Si nos cancelan una solicitud que ENVIAMOS
+                if self.solicitudEnviada?.id == idToCancel {
+                    DispatchQueue.main.async {
+                        self.solicitudEnviada = nil
+                        self.lastSentRequestID = nil
+                    }
+                }
             }
+            
+        } catch let error {
+            // Esto puede pasar si el otro dispositivo tiene una versión vieja de la app
+            print("Error al decodificar PaymentMessage de \(peerID.displayName): \(error.localizedDescription)")
+        }
     }
     
-    // (Otros métodos de delegado obligatorios pero que puedes dejar vacíos por ahora)
+    // (Otros métodos de delegado - Sin cambios)
     func session(_ session: MCSession, didReceive stream: InputStream, withName streamName: String, fromPeer peerID: MCPeerID) { }
     func session(_ session: MCSession, didStartReceivingResourceWithName resourceName: String, fromPeer peerID: MCPeerID, with progress: Progress) { }
     func session(_ session: MCSession, didFinishReceivingResourceWithName resourceName: String, fromPeer peerID: MCPeerID, at localURL: URL?, withError error: Error?) { }
 
-    // --- Métodos del Delegado MCNearbyServiceAdvertiser ---
+    // (Métodos de Advertiser y Browser - Sin cambios)
     func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID, withContext context: Data?, invitationHandler: @escaping (Bool, MCSession?) -> Void) {
-        // Aceptar automáticamente las invitaciones por simplicidad
         print("Invitación recibida de \(peerID.displayName)")
         invitationHandler(true, self.session)
     }
 
-    // --- Métodos del Delegado MCNearbyServiceBrowser ---
     func browser(_ browser: MCNearbyServiceBrowser, foundPeer peerID: MCPeerID, withDiscoveryInfo info: [String : String]?) {
-        // Invitar automáticamente a los peers encontrados por simplicidad
-        print("Peer encontrado: \(peerID.displayName). Invitando...")
-        browser.invitePeer(peerID, to: self.session, withContext: nil, timeout: 10)
-    }
+            
+            // Comprueba si ya estamos conectados O si ya lo invitamos
+            let isAlreadyConnected = session.connectedPeers.contains(peerID)
+            let hasAlreadyBeenInvited = invitedPeers.contains(peerID)
+            
+            if !isAlreadyConnected && !hasAlreadyBeenInvited {
+                // Solo invita si es nuevo
+                print("Peer encontrado: \(peerID.displayName). Invitando...")
+                browser.invitePeer(peerID, to: self.session, withContext: nil, timeout: 10)
+                
+                // Añádelo a nuestra lista de invitados
+                invitedPeers.append(peerID)
+                
+            } else {
+                // Ya lo conocemos, no hacemos nada
+                print("Peer encontrado: \(peerID.displayName), pero ya está conectado o invitado.")
+            }
+        }
 
     func browser(_ browser: MCNearbyServiceBrowser, lostPeer peerID: MCPeerID) {
         print("Peer perdido: \(peerID.displayName)")
     }
+    
 }
