@@ -1,17 +1,24 @@
 import SwiftUI
 
 struct ProfileView: View {
-    // Para permitir cerrar sesión desde aquí
-    @Binding var isAuthenticated: Bool
     
-    // Datos mock de usuario
-    @State private var name: String = "Diego Obed"
-    @State private var email: String = "diego@example.com"
+    // --- 1. CAMBIO: Recibe el AuthManager ---
+    // (Reemplaza al @Binding)
+    @EnvironmentObject var authManager: AuthManager
+    
+    // (BORRA ESTO: @Binding var isAuthenticated: Bool)
+    
+    // (BORRA LOS DATOS MOCK)
+    // @State private var name: String = "Diego Obed"
+    // @State private var email: String = "diego@example.com"
+    
+    // Mantenemos estos @State para las preferencias de la UI.
+    // 'preferredCurrency' se sincronizará con el AuthManager.
     @State private var preferredCurrency: String = "MXN"
     @State private var enableBiometrics: Bool = true
     @State private var useDarkMode: Bool = false
     
-    // Estados UI
+    // (Estados UI - Sin cambios)
     @State private var showChangePassword = false
     @State private var showCurrencyPicker = false
     @State private var showLogoutConfirm = false
@@ -22,6 +29,7 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             List {
+                // --- 2. CAMBIO: Lee los datos desde el AuthManager ---
                 Section("Tu cuenta") {
                     HStack(spacing: 14) {
                         ZStack {
@@ -35,9 +43,12 @@ struct ProfileView: View {
                                 .font(.system(size: 24, weight: .semibold))
                         }
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(name)
+                            // Usa el 'user' del manager.
+                            // '?? "..."' es un valor por defecto
+                            // por si el usuario fuera nil (no debería pasar aquí).
+                            Text(authManager.user?.name ?? "Nombre de Usuario")
                                 .font(.headline)
-                            Text(email)
+                            Text(authManager.user?.email ?? "email@example.com")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -67,6 +78,8 @@ struct ProfileView: View {
                     HStack {
                         Label("Divisa preferida", systemImage: "coloncurrencysign.circle")
                         Spacer()
+                        // 'preferredCurrency' es un @State local,
+                        // pero lo sincronizamos en .onAppear
                         Button(preferredCurrency) {
                             showCurrencyPicker = true
                         }
@@ -105,20 +118,34 @@ struct ProfileView: View {
                 HelpView()
             }
             .confirmationDialog("¿Deseas cerrar tu sesión?", isPresented: $showLogoutConfirm, titleVisibility: .visible) {
+                
+                // --- 4. CAMBIO: Llama a authManager.logout() ---
                 Button("Cerrar sesión", role: .destructive) {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.9)) {
-                        isAuthenticated = false
+                        // Esta es la nueva acción de logout
+                        authManager.logout()
                     }
                 }
                 Button("Cancelar", role: .cancel) { }
+                
             } message: {
                 Text("Podrás volver a entrar con tu correo, contraseña o biometría.")
+            }
+            
+            // --- 3. CAMBIO: Sincroniza el estado local con el manager ---
+            .onAppear {
+                // Cuando la vista aparece, actualiza las
+                // preferencias locales con los datos del usuario logueado.
+                self.preferredCurrency = authManager.user?.type_money ?? "MXN"
+                // (Aquí también cargarías 'enableBiometrics' si
+                //  viniera de tu API en el objeto User)
             }
         }
     }
 }
 
 // MARK: - Subvistas
+// (Estas subvistas no cambian y están correctas)
 
 private struct ChangePasswordView: View {
     @Environment(\.dismiss) private var dismiss
@@ -248,3 +275,34 @@ private struct HelpView: View {
         }
     }
 }
+
+// --- NUEVO: Preview actualizado ---
+#if DEBUG
+struct ProfileView_Previews: PreviewProvider {
+    
+    // Función para crear un AuthManager de prueba
+    static func createMockManager() -> AuthManager {
+        let manager = AuthManager()
+        // Crea un usuario de prueba (asegúrate de que los campos coincidan
+        // con tu struct User en UserModels.swift)
+        manager.user = User(
+            id_user: 1,
+            name: "Usuario de Prueba",
+            email: "preview@example.com",
+            password: "...",
+            created_at: "...",
+            updated_at: "...",
+            lenguaje: "es",
+            type_money: "USD",
+            rol: "cliente",
+            key_url: "..."
+        )
+        return manager
+    }
+    
+    static var previews: some View {
+        ProfileView()
+            .environmentObject(createMockManager())
+    }
+}
+#endif

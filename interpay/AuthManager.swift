@@ -7,19 +7,6 @@
 
 import Foundation
 
-// Asegúrate de que esta struct sea visible para AuthManager
-struct User: Codable, Equatable {
-    let id_user: Int
-    let name: String
-    let email: String
-    let password: String // (Recuerda que no es ideal que la API devuelva esto)
-    let created_at: String
-    let updated_at: String
-    let lenguaje: String
-    let type_money: String
-    let rol: String // <-- La propiedad clave para tus pestañas
-    let key_url: String
-}
 
 import Combine // Necesario para ObservableObject
 
@@ -102,7 +89,7 @@ class AuthManager: ObservableObject {
     
     // --- LÓGICA DE "RECORDAR SESIÓN" ---
     // Se llama solo 1 vez, cuando se crea el AuthManager
-    private func loadUserFromKeychain() {
+    func loadUserFromKeychain() {
         // 1. Revisa si guardamos un email la última vez
         guard let email = UserDefaults.standard.string(forKey: lastUserEmailKey) else {
             print("AuthManager: No hay un último usuario guardado. Se requiere login.")

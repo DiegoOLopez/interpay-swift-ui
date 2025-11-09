@@ -8,12 +8,7 @@
 import Foundation
 import Security
 
-enum AuthError: Error {
-    case invalidCredentials
-    case serverError
-    case networkError(Error)
-    case unknown
-}
+
 
 struct KeychainHelper {
 
