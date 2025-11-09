@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		FA28E80F2EC0D199000583F2 /* readme.txt in Resources */ = {isa = PBXBuildFile; fileRef = FA28E80E2EC0D18D000583F2 /* readme.txt */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		8ED1891F2EBFE18D002C199B /* interpay.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = interpay.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		FA28E80E2EC0D18D000583F2 /* readme.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = readme.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -32,6 +37,7 @@
 		8ED189162EBFE18D002C199B = {
 			isa = PBXGroup;
 			children = (
+				FA28E80E2EC0D18D000583F2 /* readme.txt */,
 				8ED189212EBFE18D002C199B /* interpay */,
 				8ED189202EBFE18D002C199B /* Products */,
 			);
@@ -109,6 +115,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FA28E80F2EC0D199000583F2 /* readme.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
