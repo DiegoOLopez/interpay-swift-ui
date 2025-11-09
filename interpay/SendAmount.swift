@@ -10,6 +10,7 @@ struct SolicitudPago: Codable, Equatable {
     var id: UUID
     var amount: Double
     var currency: String // Usaremos el 'rawValue' de tu enum, ej: "MXN"
+    var senderUserID: Int
 }
 
 // NUEVO: El "mensajero" que envuelve todos nuestros tipos de mensajes
@@ -62,14 +63,14 @@ class SendAmount: NSObject, ObservableObject, MCSessionDelegate, MCNearbyService
     }
 
     // --- FUNCIÓN DE ENVÍO (ACTUALIZADA) ---
-    func sendPaymentRequest(amount: Double, currency: String) {
+    func sendPaymentRequest(amount: Double, currency: String, senderID: Int) {
         guard !session.connectedPeers.isEmpty else {
             print("No hay peers conectados a los que enviar la solicitud.")
             return
         }
 
         // 1. Crea la solicitud
-        let solicitud = SolicitudPago(id: UUID(), amount: amount, currency: currency)
+        let solicitud = SolicitudPago(id: UUID(), amount: amount, currency: currency, senderUserID: senderID)
 
         // 2. NUEVO: Guarda este ID localmente
         self.lastSentRequestID = solicitud.id

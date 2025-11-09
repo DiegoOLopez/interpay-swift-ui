@@ -15,6 +15,7 @@ struct CobrarView: View {
     // @State private var showRequestSent: Bool = false
     @FocusState private var isAmountFocused: Bool
     @EnvironmentObject var sendAmount: SendAmount
+    @EnvironmentObject var authManager: AuthManager
     
     enum Currency: String, CaseIterable {
         case PKR = "PKR"
@@ -381,11 +382,14 @@ struct CobrarView: View {
     
     private func cobrarAction() {
         guard let amountValue = Double(amount) else { return }
-        
+        guard let myUserID = authManager.user?.id_user else {
+                    print("Error: No se pudo encontrar el ID del usuario para cobrar.")
+                    return
+                }
         isAmountFocused = false
         // Enviar la solicitud
         print("Cobrando \(selectedCurrency.symbol)\(amountValue) \(selectedCurrency.rawValue)")
-        sendAmount.sendPaymentRequest(amount: amountValue, currency: selectedCurrency.rawValue)
+        sendAmount.sendPaymentRequest(amount: amountValue, currency: selectedCurrency.rawValue, senderID: myUserID)
     }
 }
 

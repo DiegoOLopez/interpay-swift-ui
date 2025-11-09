@@ -15,6 +15,14 @@ public struct PayInformation {
     var businessAmount: Double
 }
 
+struct SaldoRequest: Codable {
+    let monto: Double
+}
+
+struct InterledgerRequest: Codable {
+    let value: Double
+}
+
 struct PagarView: View {
     // --- ESTADOS ---
     @State private var payInfo = PayInformation(
@@ -28,6 +36,8 @@ struct PagarView: View {
     @State private var isLoading = false
     @State private var rotationAngle: Double = 0
     @State private var showCancelAlert = false
+    @EnvironmentObject var authManager: AuthManager
+    @State private var paymentError: String? = nil
     
     var body: some View {
         VStack(spacing: 20) {
@@ -255,7 +265,7 @@ struct PagarView: View {
                             Button(action: {
                                 print("Payment processed.")
                                 Task {
-                                    await authenticate()
+                                    await onPaymentButtonTapped()
                                 }
                             }) {
                                 HStack(spacing: 12) {
@@ -372,6 +382,143 @@ struct PagarView: View {
                 // ❌ Ocurrió un error
                 print("Error: \(error.localizedDescription)")
             }
+    }
+    
+    private func onPaymentButtonTapped() async {
+            isLoading = true
+            paymentError = nil
+            
+            // 1. Autenticar con Face ID
+            let isAuthenticated = await authenticateWithBiometrics()
+            guard isAuthenticated else {
+                print("Autenticación biométrica fallida.")
+                isLoading = false
+                return
+            }
+            
+            print("Autenticación exitosa. Procesando pago...")
+            
+            // 2. Procesar el pago
+            do {
+                try await processPayment()
+                
+                // 3. ¡Éxito! Limpia la vista
+                print("¡Pago completado con éxito!")
+                await MainActor.run {
+                    isLoading = false
+                    // Resetea la vista (vuelve a "Waiting...")
+                    sendAmount.solicitudRecibida = nil
+                }
+                
+            } catch {
+                // 4. Manejar error
+                print("Error al procesar el pago: \(error.localizedDescription)")
+                await MainActor.run {
+                    isLoading = false
+                    paymentError = "No se pudo completar la transacción. \(error.localizedDescription)"
+                }
+            }
+        }
+        
+        /// 1. Autentica al usuario con Face ID / Touch ID
+        private func authenticateWithBiometrics() async -> Bool {
+            let context = LAContext()
+            let reason = "Confirma tu identidad para autorizar el pago."
+            
+            do {
+                let success = try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason)
+                return success
+            } catch {
+                print("Error de Biometría: \(error.localizedDescription)")
+                return false
+            }
+        }
+        
+        /// 2. Llama a las APIs para transferir el saldo
+        private func processPayment() async throws {
+            // 2a. Obtener los datos necesarios
+            guard let payerID = authManager.user?.id_user else {
+                throw AuthError.unknown // Error: No se encontró el ID del pagador
+            }
+            guard let solicitud = sendAmount.solicitudRecibida else {
+                    throw AuthError.unknown // Error: No hay solicitud
+            }
+            
+            let receiverID = solicitud.senderUserID
+            
+            // NOTA: Aquí decidimos qué montos transferir.
+            // Asumimos que el PAGADOR paga el monto en SU moneda local (MXN).
+            // Y el RECEPTOR recibe el monto en SU moneda original (USD, CAD, etc.).
+            let amountToSubtract = payInfo.localAmount
+            let amountToReceive = payInfo.businessAmount
+            
+            // 2b. Descontar saldo al pagador (tú)
+            try await updateSaldo(
+                userID: payerID,
+                monto: amountToSubtract,
+                type: "descontar"
+            )
+            
+            // 2c. Agregar saldo al receptor (el cobrador)
+            try await updateSaldo(
+                userID: receiverID,
+                monto: amountToReceive,
+                type: "agregar"
+            )
+        }
+
+        /// 3. Función de red reutilizable
+        private func updateSaldo(userID: Int, monto: Double, type: String) async throws {
+            let urlString = "http://192.168.1.109:3001/api/auth/saldo/\(type)/\(userID)"
+            guard let url = URL(string: urlString) else {
+                throw AuthError.unknown // URL inválida
+            }
+            
+            // Prepara el body
+            let body = SaldoRequest(monto: monto)
+            let bodyData = try JSONEncoder().encode(body)
+            
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.httpBody = bodyData
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            print("Enviando \(type) de \(monto) para usuario \(userID)")
+            
+            // Ejecuta la llamada
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                throw AuthError.serverError // Error de servidor
+            }
+            
+            // (Opcional: puedes decodificar una respuesta si la hay)
+            print("Respuesta de \(type) exitosa.")
+        }
+    private func transaccion(monto: Double) async throws {
+        let urlString = "http://192.168.1.109:3001/api/interledger/run-service"
+        guard let url = URL(string: urlString) else {
+            throw AuthError.unknown // URL inválida
+        }
+        
+        // Prepara el body
+        let body = InterledgerRequest(value: monto)
+        let bodyData = try JSONEncoder().encode(body)
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.httpBody = bodyData
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        
+        // Ejecuta la llamada
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+            throw AuthError.serverError // Error de servidor
+        }
+        
+        // (Opcional: puedes decodificar una respuesta si la hay)
     }
 }
 
