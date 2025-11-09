@@ -23,6 +23,8 @@ struct PagarView: View {
         localAmount: 250.0,
         businessAmount: 1000.0
     )
+    @EnvironmentObject private var sendAmount = SendAmount()
+
     
     var body: some View {
         VStack(spacing: 20) {

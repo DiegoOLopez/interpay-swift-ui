@@ -13,7 +13,8 @@ struct CobrarView: View {
     @State private var selectedCurrency: Currency = .MXN
     @State private var showCurrencyPicker: Bool = false
     @FocusState private var isAmountFocused: Bool
-    @StateObject private var sendAmount = SendAmount()
+    @EnvironmentObject private var sendAmount = SendAmount()
+    
     
     enum Currency: String, CaseIterable {
         case PKR = "PKR"

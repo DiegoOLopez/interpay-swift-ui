@@ -21,6 +21,8 @@ class SendAmount: NSObject, ObservableObject, MCSessionDelegate, MCNearbyService
 
     // Publica los peers conectados para que la vista pueda verlos si es necesario
     @Published var connectedPeers: [MCPeerID] = []
+    
+    @Published var solicitudRecibida: SolicitudPago? = nil
 
     override init() {
         // 1. Inicializa el PeerID con el nombre del dispositivo
@@ -101,7 +103,28 @@ class SendAmount: NSObject, ObservableObject, MCSessionDelegate, MCNearbyService
     func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
         // Aquí es donde RECIBIRÍAS datos (ej. una confirmación de pago)
         print("Datos recibidos de \(peerID.displayName)")
-        // Intenta decodificar los datos recibidos...
+            
+            do {
+                // 1. Intenta decodificar el Data como si fuera 'SolicitudPago'
+                let solicitudRecibida = try JSONDecoder().decode(SolicitudPago.self, from: data)
+                
+                // 2. ¡Éxito! Ahora puedes usar el objeto
+                print("¡Solicitud de pago recibida!")
+                print("Moneda: \(solicitudRecibida.currency)")
+                print("Monto: \(solicitudRecibida.amount)")
+
+                // 3. Si necesitas actualizar la UI (ej. mostrar una alerta)
+                // debes hacerlo en el hilo principal.
+                DispatchQueue.main.async {
+                    // Aquí podrías, por ejemplo, activar una alerta en tu UI
+                    // usando @Published vars para mostrar la solicitud.
+                    print("Actualizando UI en hilo principal (si es necesario)...")
+                }
+                
+            } catch let error {
+                // Esto pasará si envías un tipo de dato incorrecto
+                print("Error al decodificar SolicitudPago de \(peerID.displayName): \(error.localizedDescription)")
+            }
     }
     
     // (Otros métodos de delegado obligatorios pero que puedes dejar vacíos por ahora)
