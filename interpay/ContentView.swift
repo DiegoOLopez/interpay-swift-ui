@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  interpay
-//
-//  Created by Diego Obed on 08/11/25.
-//
-
 import SwiftUI
 
 struct ContentView: View {
@@ -13,25 +6,24 @@ struct ContentView: View {
     enum Tab {
         case cobrar
         case pagar
+        case mapa
     }
     
     var body: some View {
         TabView(selection: $selectedTab) {
             CobrarView()
                 .tag(Tab.cobrar)
-                .tabItem {
-                    Label("Cobrar", systemImage: "arrow.down.circle")
-                }
+                .tabItem { Label("Cobrar", systemImage: "arrow.down.circle") }
             
             PagarView()
                 .tag(Tab.pagar)
-                .tabItem {
-                    Label("Pagar", systemImage: "arrow.up.circle")
-                }
+                .tabItem { Label("Pagar", systemImage: "arrow.up.circle") }
+            
+            NavigationStack {
+                MapView()
+            }
+            .tag(Tab.mapa)
+            .tabItem { Label("Mapa", systemImage: "map") }
         }
     }
-}
-
-#Preview {
-    ContentView()
 }
