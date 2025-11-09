@@ -389,12 +389,7 @@ struct PagarView: View {
             paymentError = nil
             
             // 1. Autenticar con Face ID
-            let isAuthenticated = await authenticateWithBiometrics()
-            guard isAuthenticated else {
-                print("Autenticación biométrica fallida.")
-                isLoading = false
-                return
-            }
+
             
             print("Autenticación exitosa. Procesando pago...")
             
@@ -421,18 +416,32 @@ struct PagarView: View {
         }
         
         /// 1. Autentica al usuario con Face ID / Touch ID
-        private func authenticateWithBiometrics() async -> Bool {
+        private func authenticateWithBiometrics() async {
             let context = LAContext()
-            let reason = "Confirma tu identidad para autorizar el pago."
-            
+            let reason = "Para autorizar tus pagos."
+
             do {
-                let success = try await context.evaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, localizedReason: reason)
-                return success
+                // Intenta la autenticación
+                let success = try await context.evaluatePolicy(
+                    .deviceOwnerAuthenticationWithBiometrics,
+                    localizedReason: reason
+                )
+                
+                // Si tiene éxito...
+                if success {
+                    // ✅ Autenticación Exitosa
+                    print("Payment processed.")
+                    // Aquí va tu lógica de pago real
+                } else {
+                    // El usuario pudo haber fallado
+                    print("Authentication failed.")
+                }
             } catch {
-                print("Error de Biometría: \(error.localizedDescription)")
-                return false
+                // ❌ Ocurrió un error
+                print("Error: \(error.localizedDescription)")
             }
-        }
+    }
+        
         
         /// 2. Llama a las APIs para transferir el saldo
         private func processPayment() async throws {

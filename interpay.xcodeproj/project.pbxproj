@@ -15,9 +15,22 @@
 		FA28E80E2EC0D18D000583F2 /* readme.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = readme.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		8E2EF04D2EC0D9E200F59F06 /* Exceptions for "interpay" folder in "interpay" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8ED1891E2EBFE18D002C199B /* interpay */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8ED189212EBFE18D002C199B /* interpay */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8E2EF04D2EC0D9E200F59F06 /* Exceptions for "interpay" folder in "interpay" target */,
+			);
 			path = interpay;
 			sourceTree = "<group>";
 		};
@@ -261,6 +274,8 @@
 				DEVELOPMENT_TEAM = H4B93CN5UY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = interpay/Info.plist;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = Transaction;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -293,6 +308,8 @@
 				DEVELOPMENT_TEAM = H4B93CN5UY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = interpay/Info.plist;
+				INFOPLIST_KEY_NSFaceIDUsageDescription = Transaction;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
