@@ -11,7 +11,6 @@ struct Movement: Identifiable {
 
 struct HomeView: View {
     @EnvironmentObject var authManager: AuthManager
-    @State private var currency: String = "MXN"
     
     // Animaciones
     @State private var cardAppear = false
@@ -139,7 +138,7 @@ struct HomeView: View {
                         Text("Saldo disponible")
                             .font(.subheadline)
                             .foregroundColor(.white.opacity(0.85))
-                        Text("$\(authManager.saldo, specifier: "%.2f") \(currency)")
+                        Text("$\(authManager.saldo, specifier: "%.2f")")
                             .font(.system(size: 32, weight: .bold))
                             .foregroundStyle(.white)
                             .contentTransition(.numericText())
@@ -280,7 +279,7 @@ struct HomeView: View {
                     .foregroundColor(.secondary)
             }
             Spacer()
-            Text("\(move.isIncome ? "+" : "")\(currencySymbol(for: currency))\(abs(move.amount), specifier: "%.2f")")
+            Text("\(move.isIncome ? "+" : "")\(abs(move.amount), specifier: "%.2f")")
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundColor(move.isIncome ? .green : .primary)

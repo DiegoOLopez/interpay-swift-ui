@@ -26,7 +26,7 @@ struct InterledgerRequest: Codable {
 struct PagarView: View {
     // --- ESTADOS ---
     @State private var payInfo = PayInformation(
-        localType: "MXN",  // Tu moneda local
+        localType: "",  // Tu moneda local
         businessType: "-", // La moneda que llegará
         localAmount: 0.0,
         businessAmount: 0.0
@@ -315,6 +315,7 @@ struct PagarView: View {
         isLoading = true
         
         payInfo.businessType = solicitud.currency
+        payInfo.localType = authManager.user?.type_money ?? ""
         payInfo.businessAmount = solicitud.amount
         
         do {
@@ -350,7 +351,7 @@ struct PagarView: View {
         withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
             sendAmount.solicitudRecibida = nil
             payInfo = PayInformation(
-                localType: "MXN",
+                localType: "-",
                 businessType: "-",
                 localAmount: 0.0,
                 businessAmount: 0.0
@@ -458,27 +459,26 @@ struct PagarView: View {
             // NOTA: Aquí decidimos qué montos transferir.
             // Asumimos que el PAGADOR paga el monto en SU moneda local (MXN).
             // Y el RECEPTOR recibe el monto en SU moneda original (USD, CAD, etc.).
-            let amountToSubtract = payInfo.localAmount
-            let amountToReceive = payInfo.businessAmount
             // 2b. Descontar saldo al pagador (tú)
+            print("Descontar")
             try await updateSaldo(
                 userID: payerID,
-                monto: -1 * amountToSubtract,
-                type: "descontar"
+                monto: -1 * payInfo.localAmount,
             )
             
+            print("Agregar saldo")
             // 2c. Agregar saldo al receptor (el cobrador)
             try await updateSaldo(
                 userID: receiverID,
-                monto: amountToReceive,
-                type: "agregar"
+                monto: payInfo.businessAmount,
             )
-            try await transaccion(monto: amountToSubtract)
+            print("Fin")
+            //try await transaccion(monto: amountToSubtract)
 
         }
 
         /// 3. Función de red reutilizable
-        private func updateSaldo(userID: Int, monto: Double, type: String) async throws {
+        private func updateSaldo(userID: Int, monto: Double) async throws {
             let urlString = "http://192.168.1.109:3001/api/auth/saldo/\(userID)"
             guard let url = URL(string: urlString) else {
                 throw AuthError.unknown // URL inválida
@@ -493,17 +493,15 @@ struct PagarView: View {
             request.httpBody = bodyData
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             
-            print("Enviando \(type) de \(monto) para usuario \(userID)")
             
             // Ejecuta la llamada
-            let (data, response) = try await URLSession.shared.data(for: request)
-            
+            let (_, response) = try await URLSession.shared.data(for: request)
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 throw AuthError.serverError // Error de servidor
             }
             
             // (Opcional: puedes decodificar una respuesta si la hay)
-            print("Respuesta de \(type) exitosa.")
+            print("Respuesta exitosa.")
         }
     private func transaccion(monto: Double) async throws {
         let urlString = "http://192.168.1.109:3001/api/interledger/run-service"
