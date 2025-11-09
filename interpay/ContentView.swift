@@ -10,6 +10,7 @@ struct ContentView: View {
         case cobrar
         case pagar
         case mapa
+        case perfil
     }
     
     var body: some View {
@@ -33,6 +34,10 @@ struct ContentView: View {
                     }
                     .tag(Tab.mapa)
                     .tabItem { Label("Mapa", systemImage: "map") }
+                    
+                    ProfileView(isAuthenticated: $isAuthenticated)
+                        .tag(Tab.perfil)
+                        .tabItem { Label("Perfil", systemImage: "person.crop.circle") }
                 }
                 .environmentObject(sendAmount)
             } else {
