@@ -9,7 +9,41 @@ struct LoginView: View {
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
     @State private var animateBG: Bool = false
-    @State private var showRegister: Bool = false // <-- NUEVO
+    @State private var showRegister: Bool = false
+    // Estructura para ENVIAR el JSON de login
+    struct LoginRequest: Codable {
+        let email: String
+        let password: String
+    }
+
+    // Estructura para RECIBIR el JSON de respuesta
+    // 1. Esta es la respuesta COMPLETA de la API
+    struct LoginResponse: Codable {
+        let message: String
+        let user: User
+    }
+
+    // 2. Este es el objeto 'user' anidado
+    struct User: Codable, Equatable {
+        let id_user: Int
+        let name: String
+        let email: String
+        let password: String // (Nota: es una mala práctica que tu API devuelva la contraseña)
+        let created_at: String
+        let updated_at: String
+        let lenguaje: String
+        let type_money: String
+        let rol: String
+        let key_url: String
+    }
+
+    // Un enum de error personalizado para manejar fallos de login
+    enum AuthError: Error {
+        case invalidCredentials
+        case serverError
+        case networkError(Error)
+        case unknown
+    }
     
     // Binding para notificar autenticación exitosa
     @Binding var isAuthenticated: Bool
@@ -173,13 +207,84 @@ struct LoginView: View {
             }
             return
         }
-        showError = false
-        isLoading = true
-        // Simulación de login (2s)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.9)) {
-                isLoading = false
-                isAuthenticated = true
+        
+        withAnimation {
+            showError = false
+            isLoading = true
+        }
+        
+        Task {
+            do {
+                // 3. Prepara la solicitud
+                let urlString = "http://192.168.1.109:3001/api/auth/login" 
+                guard let url = URL(string: urlString) else {
+                    throw AuthError.unknown
+                }
+                
+                // 4. Prepara el cuerpo (Body) de la solicitud
+                let loginData = LoginRequest(email: email, password: password)
+                let bodyData = try JSONEncoder().encode(loginData)
+                
+                // 5. Configura la petición (Request)
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.httpBody = bodyData
+                request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+                // 6. Ejecuta la llamada de red
+                let (data, response) = try await URLSession.shared.data(for: request)
+                
+                // 7. Valida la respuesta del servidor
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    throw AuthError.unknown
+                }
+                
+                if httpResponse.statusCode == 401 {
+                    throw AuthError.invalidCredentials
+                } else if httpResponse.statusCode != 200 {
+                    throw AuthError.serverError
+                }
+                
+                // --- 8. Decodifica la NUEVA respuesta exitosa ---
+                let loginResponse = try JSONDecoder().decode(LoginResponse.self, from: data)
+                
+                // --- 9. ¡ÉXITO! Guardar solo el OBJETO USUARIO ---
+                // (Ya no guardamos el token)
+                let userData = try JSONEncoder().encode(loginResponse.user)
+                try KeychainHelper.save(
+                    data: userData,
+                    service: "com.tu-app.interpay.user", // <-- Servicio para el USUARIO
+                    account: email // Usamos el email como "llave"
+                )
+                
+                // 10. Actualiza la UI en el Hilo Principal
+                await MainActor.run {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.9)) {
+                        isLoading = false
+                        isAuthenticated = true
+                    }
+                }
+                
+            } catch let authError as AuthError {
+                // Maneja errores de login específicos
+                await MainActor.run {
+                    isLoading = false
+                    showError = true
+                    switch authError {
+                    case .invalidCredentials:
+                        errorMessage = "Usuario o contraseña incorrectos."
+                    default:
+                        errorMessage = "Error del servidor. Intenta de nuevo."
+                    }
+                }
+            } catch {
+                // Maneja errores de red genéricos (ej. sin internet)
+                await MainActor.run {
+                    isLoading = false
+                    showError = true
+                    errorMessage = "Error de red. Revisa tu conexión."
+                    print("Error de login: \(error.localizedDescription)") // Para depurar
+                }
             }
         }
     }
