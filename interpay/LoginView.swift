@@ -9,6 +9,7 @@ struct LoginView: View {
     @State private var showError: Bool = false
     @State private var errorMessage: String = ""
     @State private var animateBG: Bool = false
+    @State private var showRegister: Bool = false // <-- NUEVO
     
     // Binding para notificar autenticación exitosa
     @Binding var isAuthenticated: Bool
@@ -111,9 +112,17 @@ struct LoginView: View {
                     
                     HStack {
                         Button("Crear cuenta") {
-                            // Aquí podrías navegar a un flujo de registro
+                            showRegister = true        // <-- usar el booleano
                         }
                         .foregroundColor(.white.opacity(0.9))
+                        .sheet(isPresented: $showRegister) { // <-- presentar el sheet
+                            RegisterView {
+                                // Autenticar al completar registro (opcional)
+                                withAnimation(.spring(response: 0.6, dampingFraction: 0.9)) {
+                                    isAuthenticated = true
+                                }
+                            }
+                        }
                         
                         Spacer()
                         
