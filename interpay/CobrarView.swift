@@ -13,7 +13,7 @@ struct CobrarView: View {
     @State private var selectedCurrency: Currency = .MXN
     @State private var showCurrencyPicker: Bool = false
     @FocusState private var isAmountFocused: Bool
-    @EnvironmentObject private var sendAmount = SendAmount()
+    @EnvironmentObject var sendAmount: SendAmount
     
     
     enum Currency: String, CaseIterable {
@@ -60,18 +60,19 @@ struct CobrarView: View {
         
         var name: String {
             switch self {
-            case .PKR: return "Rupia Pakistaní"
-            case .PEB: return "Rublo Ruso"
-            case .EGG: return "Libra Egipcia"
-            case .CAD: return "Dólar Canadiense"
-            case .SGD: return "Dólar Singapur"
-            case .MXN: return "Peso Mexicano"
-            case .GBP: return "Libra Esterlina"
-            case .ZAR: return "Rand Sudafricano"
+            case .PKR: return "Pakistani Rupee"
+            case .PEB: return "Russian Ruble"
+            case .EGG: return "Egyptian Pound"
+            case .CAD: return "Canadian Dollar"
+            case .SGD: return "Singapore Dollar"
+            case .MXN: return "Mexican Peso"
+            case .GBP: return "British Pound"
+            case .ZAR: return "South African Rand"
             case .EUR: return "Euro"
-            case .USD: return "Dólar Americano"
+            case .USD: return "US Dollar"
             }
         }
+
     }
     
     var body: some View {

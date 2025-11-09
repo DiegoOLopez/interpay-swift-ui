@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var selectedTab: Tab = .cobrar
+    @StateObject private var sendAmount = SendAmount()
     
     enum Tab {
         case cobrar
@@ -24,6 +25,6 @@ struct ContentView: View {
             }
             .tag(Tab.mapa)
             .tabItem { Label("Mapa", systemImage: "map") }
-        }
+        }.environmentObject(sendAmount)
     }
 }
