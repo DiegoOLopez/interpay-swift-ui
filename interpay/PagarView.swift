@@ -18,7 +18,7 @@ public struct PayInformation {
 struct PagarView: View {
     // Estados para los montos
     @State private var payInfo = PayInformation(
-        localType: "MX",
+        localType: "MXN",
         businessType: "-",
         localAmount: 0.0,
         businessAmount: 0.0

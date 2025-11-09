@@ -21,7 +21,7 @@ struct ExchangeRateResponse: Codable {
 class CurrencyConverter {
     
     // Si eres revisor, y ves esta API key aqui, no la copees:)
-    private let apiKey = "https://v6.exchangerate-api.com/v6/f33d32d6497065e9c4454b56/latest/USD"
+    private let apiKey = "f33d32d6497065e9c4454b56"
     
     // Función asíncrona para obtener la conversión
     func convert(amount: Double, from baseCurrency: String, to targetCurrency: String) async throws -> Double {
