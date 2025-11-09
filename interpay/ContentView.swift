@@ -72,6 +72,22 @@ struct ContentView: View {
                         .tag(Tab.perfil)
                         .tabItem { Label("Perfil", systemImage: "person.crop.circle") }
                 }
+                .task(id: selectedTab) {
+                                    // Esto se ejecutará CADA VEZ que 'selectedTab' cambie
+                                    
+                                    // 3. Comprueba si la nueva pestaña es '.home'
+                                    if selectedTab == .home {
+                                        // 4. Obtén el ID de usuario de forma segura
+                                        guard let userID = authManager.user?.id_user else {
+                                            print("Home seleccionado, pero no hay ID de usuario.")
+                                            return
+                                        }
+                                        
+                                        // 5. Ejecuta tu función 'await'
+                                        print("Refrescando saldo para usuario \(userID)...")
+                                        await authManager.fetchBalance(for: userID)
+                                    }
+                                }
                 // (El .environmentObject(sendAmount) se BORRA de aquí,
                 //  ya que se inyecta desde el archivo principal)
 

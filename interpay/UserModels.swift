@@ -41,3 +41,8 @@ enum AuthError: Error {
     case encodingError // Añadí este por si falla la codificación
     case unknown
 }
+
+
+struct SaldoResponse: Codable {
+    let saldo: Double
+}

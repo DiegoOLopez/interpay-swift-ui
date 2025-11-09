@@ -21,6 +21,7 @@ class AuthManager: ObservableObject {
      cada vez que este valor cambia.
      */
     @Published var user: User? = nil
+    @Published var saldo: Double = 0.0
     
     // Una variable 'computada' para que sea fácil comprobar
     // si estamos logueados o no (ej. 'if authManager.isAuthenticated')
@@ -52,7 +53,10 @@ class AuthManager: ObservableObject {
                 service: userKeychainService,
                 account: user.email
             )
-            
+            Task {
+                await fetchBalance(for: user.id_user)
+                
+            }
             // 3. Guarda el email en UserDefaults (que no es seguro)
             //    Solo para saber a quién buscar la próxima vez que se abra la app.
             UserDefaults.standard.setValue(user.email, forKey: lastUserEmailKey)
@@ -115,4 +119,35 @@ class AuthManager: ObservableObject {
             print("AuthManager: Error al decodificar usuario del Keychain. \(error)")
         }
     }
+    
+    func fetchBalance(for userID: Int) async {
+            // (Asegúrate de que la IP y el puerto sean correctos)
+            let urlString = "http://192.168.1.109:3001/api/auth/saldo/\(userID)"
+            guard let url = URL(string: urlString) else {
+                print("AuthManager: URL de saldo inválida")
+                return
+            }
+            
+            do {
+                // Asumimos que es una petición GET simple
+                let (data, response) = try await URLSession.shared.data(from: url)
+                
+                guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                    print("AuthManager: Error del servidor al obtener saldo (código: \((response as? HTTPURLResponse)?.statusCode ?? 0))")
+                    return
+                }
+                
+                // Decodifica la respuesta {"saldo": 123.45}
+                let saldoResponse = try JSONDecoder().decode(SaldoResponse.self, from: data)
+                
+                // Publica el saldo en el hilo principal
+                await MainActor.run {
+                    self.saldo = saldoResponse.saldo
+                    print("AuthManager: Saldo actualizado a \(self.saldo)")
+                }
+                
+            } catch {
+                print("AuthManager: Error fatal al buscar/decodificar saldo: \(error.localizedDescription)")
+            }
+        }
 }

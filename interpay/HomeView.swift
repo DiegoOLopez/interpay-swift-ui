@@ -10,7 +10,7 @@ struct Movement: Identifiable {
 }
 
 struct HomeView: View {
-    @State private var balance: Double = 12500.75
+    @EnvironmentObject var authManager: AuthManager
     @State private var currency: String = "MXN"
     
     // Animaciones
@@ -139,7 +139,7 @@ struct HomeView: View {
                         Text("Saldo disponible")
                             .font(.subheadline)
                             .foregroundColor(.white.opacity(0.85))
-                        Text("$\(balance, specifier: "%.2f") \(currency)")
+                        Text("$\(authManager.saldo, specifier: "%.2f") \(currency)")
                             .font(.system(size: 32, weight: .bold))
                             .foregroundStyle(.white)
                             .contentTransition(.numericText())
