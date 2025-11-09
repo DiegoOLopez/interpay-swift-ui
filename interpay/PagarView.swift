@@ -460,7 +460,6 @@ struct PagarView: View {
             // Y el RECEPTOR recibe el monto en SU moneda original (USD, CAD, etc.).
             let amountToSubtract = payInfo.localAmount
             let amountToReceive = payInfo.businessAmount
-            try await transaccion(monto: amountToSubtract)
             // 2b. Descontar saldo al pagador (tú)
             try await updateSaldo(
                 userID: payerID,
@@ -474,11 +473,13 @@ struct PagarView: View {
                 monto: amountToReceive,
                 type: "agregar"
             )
+            try await transaccion(monto: amountToSubtract)
+
         }
 
         /// 3. Función de red reutilizable
         private func updateSaldo(userID: Int, monto: Double, type: String) async throws {
-            let urlString = "http://192.168.1.109:3001/api/auth/saldo/\(type)/\(userID)"
+            let urlString = "http://192.168.1.109:3001/api/auth/saldo/\(userID)"
             guard let url = URL(string: urlString) else {
                 throw AuthError.unknown // URL inválida
             }
@@ -488,7 +489,7 @@ struct PagarView: View {
             let bodyData = try JSONEncoder().encode(body)
             
             var request = URLRequest(url: url)
-            request.httpMethod = "POST"
+            request.httpMethod = "PATCH"
             request.httpBody = bodyData
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             
