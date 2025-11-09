@@ -44,7 +44,7 @@ struct ContentView: View {
                         
                         SubscriptionView()
                             .tag(Tab.subscription)
-                            .tabItem{ Label("Suscription", systemImage: "card") }
+                            .tabItem{ Label("Suscription", systemImage: "star.fill") }
                         
                         SalesView()
                             .tag(Tab.sales)
