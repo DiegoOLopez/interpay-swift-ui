@@ -117,7 +117,7 @@ class SendAmount: NSObject, ObservableObject, MCSessionDelegate, MCNearbyService
                 // debes hacerlo en el hilo principal.
                 DispatchQueue.main.async {
                     // Aquí podrías, por ejemplo, activar una alerta en tu UI
-                    // usando @Published vars para mostrar la solicitud.
+                    self.solicitudRecibida = solicitudRecibida
                     print("Actualizando UI en hilo principal (si es necesario)...")
                 }
                 
