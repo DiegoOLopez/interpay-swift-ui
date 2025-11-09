@@ -451,11 +451,11 @@ struct PagarView: View {
             // Y el RECEPTOR recibe el monto en SU moneda original (USD, CAD, etc.).
             let amountToSubtract = payInfo.localAmount
             let amountToReceive = payInfo.businessAmount
-            
+            try await transaccion(monto: amountToSubtract)
             // 2b. Descontar saldo al pagador (tú)
             try await updateSaldo(
                 userID: payerID,
-                monto: amountToSubtract,
+                monto: -1 * amountToSubtract,
                 type: "descontar"
             )
             
