@@ -1,7 +1,7 @@
 import Foundation
 import Combine
 // Estructura de datos que realmente enviaremos
-struct SolicitudPago: Codable {
+struct SolicitudPago: Codable, Equatable {
     var id: UUID
     var amount: Double
     var currency: String // Usaremos el 'rawValue' de tu enum, ej: "MXN"

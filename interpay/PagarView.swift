@@ -8,10 +8,10 @@
 import SwiftUI
 
 public struct PayInformation {
-    let localType: String
-    let businessType: String
-    let localAmount: Double
-    let businessAmount: Double
+    var localType: String
+    var businessType: String
+    var localAmount: Double
+    var businessAmount: Double
 }
 
 
@@ -84,6 +84,21 @@ struct PagarView: View {
             .padding(.horizontal)
             .padding(.bottom, 40)
         }
+        .onChange(of: sendAmount.solicitudRecibida) { _, nuevaSolicitud in
+            
+            guard let solicitud = nuevaSolicitud else { return }
+            if solicitud.currency == "MXN" {
+                payInfo.localAmount = solicitud.amount
+            } else if solicitud.currency == "USD" {
+                payInfo.businessAmount = solicitud.amount
+            } else {
+                        // Si envían otra moneda (ej. EUR), PagarView no está
+                        // preparada para mostrarla. La ponemos en 'local' como default.
+                print("Recibida moneda \(solicitud.currency), asignando a localAmount.")
+                payInfo.localAmount = solicitud.amount
+            }
+        }
+        
     }
 }
 
