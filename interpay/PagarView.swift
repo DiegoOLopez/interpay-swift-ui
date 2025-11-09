@@ -104,4 +104,5 @@ struct PagarView: View {
 
 #Preview {
     PagarView()
+        .environmentObject(SendAmount())
 }

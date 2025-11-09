@@ -231,6 +231,7 @@ struct CobrarView: View {
                                     }
                                 }
                             }
+                            .padding(.bottom, 80) // <-- AÑADE ESTA LÍNEA
                         }
                         .frame(maxHeight: 400)
                     }
@@ -316,4 +317,5 @@ struct RoundedCorner: Shape {
 
 #Preview {
     CobrarView()
+        .environmentObject(SendAmount())
 }
